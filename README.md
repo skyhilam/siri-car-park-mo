@@ -15,4 +15,6 @@
 []()
 
 ## TG 討論區
-歡迎大家可以加入[Telegram 喂siri](https://t.me/joinchat/GJTk0BdKTrqwFzqZihzPKA)分享或交流
+歡迎大家加入[Telegram 喂siri](https://t.me/joinchat/GJTk0BdKTrqwFzqZihzPKA)群提出意見，分享使用心得，交流開發心得等。
+
+我係林何田 sky lam，多謝你的閱讀。加油！
