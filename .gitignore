@@ -2,5 +2,4 @@ sftp-config.json
 node_modules
 package-lock.json
 data.json
-maps.json
 maps.js

@@ -39,7 +39,7 @@ async function fetch(myLocation, retrytimes) {
 			item = {}
 		}
 
-		if (i % 4 == 0) {key = 'place'}
+		if (i % 4 == 0) {key = 'name'}
 		if (i % 4 == 1) {key = 'car'}
 		if (i % 4 == 2) {key = 'motorcycle'}
 		if (i % 4 == 3) {key = 'date'}
@@ -51,14 +51,14 @@ async function fetch(myLocation, retrytimes) {
 	const places = nearest(myLocation)
 
 	const result = map(places, p => {
-		return find(data, {place: p.place})
+		return find(data, {name: p.name})
 	})
 
 	try {
 		var message = ''
 		for (var i = 0; i < result.length; i++) {
 			const item = result[i]
-			message += `${item.place}有${item.car}個車位，`
+			message += `${item.name}有${item.car}個車位，`
 		}
 	} catch(e) {
 		console.log('sleep 100ms, retry')

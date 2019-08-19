@@ -27,10 +27,6 @@
 ## 討論區
 如果大家有任何意見或建議歡迎加入[Telegram 喂siri](https://t.me/joinchat/GJTk0BdKTrqwFzqZihzPKA)群提出，本群主要目的是分享使用心得，交流開發心得，提出問題尋找解決方案等。
 
-## 關於作者
-我係林何田 sky lam，主要從事軟件開發及項目策劃，主用開發語言Laravel, Nodejs。
-多謝您的閱讀。加油！
-
 
 ## 開源
 [https://github.com/skyhilam/siri-car-park-mo](https://github.com/skyhilam/siri-car-park-mo)
