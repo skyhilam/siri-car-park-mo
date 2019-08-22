@@ -18,8 +18,8 @@ async function fetch(n) {
 	
 	return map(data, i => ({
 		event: i.title, 
-		date: i.start.split(' ')[0],
-		time: `${i.start.split(' ')[1]}~${i.end.split(' ')[1]}`, 
+		date: new moment(i.start).format('M月DD日'),
+		time: `${new moment(i.start).format('H點mm分')}~${new moment(i.end).format('H點mm分')}`, 
 	}))
 }
 
