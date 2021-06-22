@@ -4,12 +4,12 @@ const nearest = require('../nearest')
 const express = require('express')
 const router = express.Router()
 
-const {map, find} = require('lodash')
-const {msleep} = require('sleep')
+const { map, find } = require('lodash')
+const { msleep } = require('sleep')
 
 
 async function fetch(myLocation, retrytimes) {
-	
+
 	const resp = await axios({
 		method: 'get',
 		url: 'https://www.dsat.gov.mo/dsat/carpark_realtime_core.aspx',
@@ -28,32 +28,38 @@ async function fetch(myLocation, retrytimes) {
 
 	const root = HTMLParser.parse(resp.data)
 
-	const columns = root.querySelectorAll('.myTable td')
+	const columns = root.querySelectorAll('.myTable tr')
 
 	const data = []
 
 	var item = {}
 	var key = ''
 
-	for (var i = 4; i < columns.length; i++) {
-		if (i > 4 && i %4 == 0) {
-			data.push(item)
-			item = {}
-		}
+	for (var i = 1; i < columns.length; i++) {
+		const tds = columns[i].querySelectorAll('td')
 
-		if (i % 4 == 0) {key = 'name'}
-		if (i % 4 == 1) {key = 'car'}
-		if (i % 4 == 2) {key = 'motorcycle'}
-		if (i % 4 == 3) {key = 'date'}
+		tds.forEach((td, idx) => {
+			if (idx == 4) { 
+				data.push(item) 
+				return;
+			}
 
-		item[key] = (columns[i].text).replace('      ', '').replace("     \r\n                ", '')
+			if (idx == 0) { key = 'name' }
+			if (idx == 1) { key = 'car' }
+			if (idx == 2) { key = 'motorcycle' }
+			if (idx == 3) { key = 'date' }
+
+			item[key] = (td.text).replace('      ', '').replace("     \r\n                ", '').replace("     \r                ", '')
+		})
+
+		item = {}
 
 	}
 
 	const places = nearest(myLocation)
 
 	const result = map(places, p => {
-		return find(data, {name: p.name})
+		return find(data, { name: p.name })
 	})
 
 	try {
@@ -62,7 +68,7 @@ async function fetch(myLocation, retrytimes) {
 			const item = result[i]
 			message += `${item.name}有${item.car}個車位，`
 		}
-	} catch(e) {
+	} catch (e) {
 		console.log(e)
 		console.log('sleep 100ms, retry')
 		await msleep(100)
@@ -70,26 +76,26 @@ async function fetch(myLocation, retrytimes) {
 			retrytimes++
 			return fetch(myLocation, retrytimes)
 		}
-		return {message: '網絡不穩定，請重新嘗試一次'}
+		return { message: '網絡不穩定，請重新嘗試一次' }
 	}
 
-	return {message}
+	return { message }
 
 }
 
 
 
 router.get('/v1', async (req, res) => {
-	const {lat, lng} = req.query
+	const { lat, lng } = req.query
 
 	var retrytimes = 0
 
 	if (isNaN(lat) || isNaN(lng)) {
-		res.send({message: '格式錯誤'})
+		res.send({ message: '格式錯誤' })
 		return;
 	}
-	console.log({lat: parseFloat(lat), lng: parseFloat(lng)});
-	const data = await fetch({lat: parseFloat(lat), lng: parseFloat(lng)}, retrytimes)
+	console.log({ lat: parseFloat(lat), lng: parseFloat(lng) });
+	const data = await fetch({ lat: parseFloat(lat), lng: parseFloat(lng) }, retrytimes)
 
 	res.send(data)
 })
