@@ -1,3 +1,4 @@
+require('dotenv').config()
 const express = require('express')
 const expressGoogleAnalytics = require('express-google-analytics')
 const v1 = require('./pages/v1')
@@ -9,7 +10,7 @@ const analytics = expressGoogleAnalytics('UA-80328109-11');
 
 
 const app = express()
-const port = 8001
+const port = process.env.APP_PORT
 
 app.use(analytics)
 
