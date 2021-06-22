@@ -88,7 +88,7 @@ router.get('/v1', async (req, res) => {
 		res.send({message: '格式錯誤'})
 		return;
 	}
-
+	console.log({lat: parseFloat(lat), lng: parseFloat(lng)});
 	const data = await fetch({lat: parseFloat(lat), lng: parseFloat(lng)}, retrytimes)
 
 	res.send(data)
