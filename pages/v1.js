@@ -1,86 +1,87 @@
 const axios = require('axios')
-const HTMLParser = require('node-html-parser')
-const nearest = require('../nearest')
 const express = require('express')
 const router = express.Router()
 
-const { map, find } = require('lodash')
-const { msleep } = require('sleep')
+const convert = require('xml-js');
+const { map, filter } = require('lodash')
 
-
-async function fetch(myLocation, retrytimes) {
-
-	const resp = await axios({
-		method: 'get',
-		url: 'https://www.dsat.gov.mo/dsat/carpark_realtime_core.aspx',
-		headers: {
-			Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-			Cookie: 'ASP.NET_SessionId=1oshc1zfow1mzkuvotbn3mih',
-			'Accept-Encoding': 'br, gzip, deflate',
-			Host: 'www.dsat.gov.mo',
-			'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.1.2 Safari/605.1.15',
-			'Accept-Language': 'en-us',
-			Referer: 'https://www.dsat.gov.mo/dsat/carpark_realtime.aspx',
-			Connection: 'keep-alive'
-		}
-	})
-
-
-	const root = HTMLParser.parse(resp.data)
-
-	const columns = root.querySelectorAll('.myTable tr')
-
-	const data = []
-
-	var item = {}
-	var key = ''
-
-	for (var i = 1; i < columns.length; i++) {
-		const tds = columns[i].querySelectorAll('td')
-
-		tds.forEach((td, idx) => {
-			if (idx == 4) { 
-				data.push(item) 
-				return;
-			}
-
-			if (idx == 0) { key = 'name' }
-			if (idx == 1) { key = 'car' }
-			if (idx == 2) { key = 'motorcycle' }
-			if (idx == 3) { key = 'date' }
-
-			item[key] = (td.text).replace('      ', '').replace("     \r\n                ", '').replace("     \r                ", '')
-		})
-
-		item = {}
-
+const http = axios.create({
+	baseURL: 'https://dsat.apigateway.data.gov.mo',
+	headers: {
+		'Authorization': 'APPCODE 09d43a591fba407fb862412970667de4'
 	}
+})
 
-	const places = nearest(myLocation)
-
-	const result = map(places, p => {
-		return find(data, { name: p.name })
-	})
-
+// 獲取停車場詳細資料
+async function getCardParkDetails() {
 	try {
-		var message = ''
-		for (var i = 0; i < result.length; i++) {
-			const item = result[i]
-			message += `${item.name}有${item.car}個車位，`
-		}
+
+		const { data } = await http.get('/car_park_detail')
+
+		const json = convert.xml2json(data, {
+			compact: true,
+		});
+
+		return JSON.parse(json).CarPark.Car_park_info
 	} catch (e) {
-		console.log(e)
-		console.log('sleep 100ms, retry')
-		await msleep(100)
-		if (retrytimes < 3) {
-			retrytimes++
-			return fetch(myLocation, retrytimes)
-		}
-		return { message: '網絡不穩定，請重新嘗試一次' }
+		console.error(e);
 	}
+}
 
-	return { message }
+// 獲取停車場停車位資料
+async function getCardParkSpaces() {
+	try {
 
+		const { data } = await http.get('/car_park_maintance')
+
+		const json = convert.xml2json(data, {
+			compact: true,
+		});
+
+		return JSON.parse(json).CarPark.Car_park_info
+	} catch (e) {
+		console.error(e);
+	}
+}
+
+// 獲取以我為中心最近的停車場
+async function getNearbyCardPark(lat, lng) {
+	const details = await getCardParkDetails()
+	const spaces = await getCardParkSpaces()
+
+	// 根據經緯度尋找最近的停車場
+	const result = filter(details, item => {
+		const data = item._attributes
+		const { X_coords: x, Y_coords: y } = data
+
+		const distance = Math.sqrt(Math.pow(x - lat, 2) + Math.pow(y - lng, 2))
+		return distance < 0.01
+	})
+
+	// 以我的位置為中心排序附近的停車場
+	result.sort((a, b) => {
+		const aData = a._attributes
+		const bData = b._attributes
+
+		const aDistance = Math.sqrt(Math.pow(aData.X_coords - lat, 2) + Math.pow(aData.Y_coords - lng, 2))
+		const bDistance = Math.sqrt(Math.pow(bData.X_coords - lat, 2) + Math.pow(bData.Y_coords - lng, 2))
+
+		return aDistance - bDistance
+	})
+
+	return map(result, item => {
+		const data = item._attributes
+		const space = spaces.find(space => space._attributes.ID === data.CP_ID)?._attributes
+
+
+		return {
+			id: data.CP_ID,
+			name: data.NameC,
+			Car_CNT: space?.Car_CNT, // 汽車位車位數量
+			MB_CNT: space?.MB_CNT, // 摩托車車位數量
+			last_update: space?.Time, // 最後更新時間
+		}
+	});
 }
 
 
@@ -88,16 +89,30 @@ async function fetch(myLocation, retrytimes) {
 router.get('/v1', async (req, res) => {
 	const { lat, lng } = req.query
 
-	var retrytimes = 0
 
-	if (isNaN(lat) || isNaN(lng)) {
-		res.send({ message: '格式錯誤' })
-		return;
+	var message = '網絡不穩定，請重新嘗試一次'
+	try {
+		const result = await getNearbyCardPark(lat, lng)
+
+		if (result.length === 0) {
+			message = '附近沒有停車場'
+		} else {
+			message = ''
+			result.forEach(item => {
+				message += `${item.name}有${item.Car_CNT}個車位，`
+			})
+			// 最後一個逗號改成句號
+			message = message.replace(/，([^，]*)$/, '。$1')
+		}
+
+	} catch (e) {
+		console.error(e)
 	}
-	console.log({ lat: parseFloat(lat), lng: parseFloat(lng) });
-	const data = await fetch({ lat: parseFloat(lat), lng: parseFloat(lng) }, retrytimes)
 
-	res.send(data)
+
+	res.send({
+		message,
+	});
 })
 
 
