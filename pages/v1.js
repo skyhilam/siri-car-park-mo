@@ -8,7 +8,7 @@ const { map, filter } = require('lodash')
 const http = axios.create({
 	baseURL: 'https://dsat.apigateway.data.gov.mo',
 	headers: {
-		'Authorization': 'APPCODE 09d43a591fba407fb862412970667de4'
+		'Authorization': process.env.API_TOKEN
 	}
 })
 
