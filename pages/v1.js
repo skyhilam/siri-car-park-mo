@@ -55,7 +55,7 @@ async function getNearbyCardPark(lat, lng) {
 		const { X_coords: x, Y_coords: y } = data
 
 		const distance = Math.sqrt(Math.pow(x - lat, 2) + Math.pow(y - lng, 2))
-		return distance < 0.005 // 以我的位置為中心，半徑 0.5 公里
+		return distance < 0.0075 // 以我的位置為中心，半徑 0.75 公里
 	})
 
 	// 以我的位置為中心排序附近的停車場
